@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify OTP — Bandaara</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f3ef;
+      --surface: #faf9f7;
+      --card: #ffffff;
+      --border: rgba(0,0,0,0.08);
+      --accent: #4f7cff;
+      --accent-soft: rgba(79,124,255,0.08);
+      --text: #1a1a2e;
+      --muted: #8a8fa8;
+      --success: #22c55e;
+      --success-soft: rgba(34,197,94,0.08);
+      --danger: #ef4444;
+      --danger-soft: rgba(239,68,68,0.08);
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      padding: 24px 16px;
+    }
+
+    /* BG blobs */
+    .bg-blob {
+      position:fixed; border-radius:50%;
+      filter:blur(80px); pointer-events:none;
+      z-index:0; opacity:.45;
+    }
+    .blob1 { width:480px;height:480px;background:radial-gradient(circle,rgba(79,124,255,.12) 0%,transparent 70%);top:-140px;right:-100px; }
+    .blob2 { width:360px;height:360px;background:radial-gradient(circle,rgba(255,180,100,.10) 0%,transparent 70%);bottom:-80px;left:-80px; }
+
+    /* ── CARD ── */
+    #main {
+      position:relative; z-index:1;
+      width:100%; max-width:420px;
+      opacity:0; transform:translateY(16px);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 52px 44px 44px;
+      box-shadow:
+        0 1px 3px rgba(0,0,0,.04),
+        0 8px 32px rgba(0,0,0,.06),
+        0 32px 64px rgba(0,0,0,.04);
+    }
+
+    /* Icon */
+    .icon-wrap {
+      width: 56px; height: 56px;
+      background: var(--accent-soft);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; margin-bottom: 28px;
+      opacity:0; transform:scale(0.8);
+    }
+
+    /* Header */
+    .heading {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem; font-weight: 600;
+      letter-spacing: -0.03em; color: var(--text);
+      line-height: 1.1; margin-bottom: 6px;
+      opacity:0; transform:translateY(10px);
+    }
+    .heading em { font-style:italic; font-weight:300; color:var(--accent); }
+
+    .subtitle {
+      font-size: 0.85rem; color: var(--muted);
+      font-weight: 400; margin-bottom: 8px;
+      opacity:0; transform:translateY(8px);
+      line-height: 1.55;
+    }
+    .subtitle strong { color: var(--text); font-weight: 600; }
+
+    /* Error / Success banner */
+    .banner {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.82rem; font-weight: 500;
+      margin-bottom: 20px;
+      opacity:0; transform:translateY(6px);
+    }
+    .banner.error   { background:var(--danger-soft);  border:1px solid rgba(239,68,68,.2);  color:var(--danger);  }
+    .banner.success { background:var(--success-soft); border:1px solid rgba(34,197,94,.2);  color:var(--success); }
+    .banner-icon { font-size: 1rem; flex-shrink:0; }
+
+    /* ── OTP INPUT BOXES ── */
+    .otp-label {
+      font-size: 0.75rem; font-weight: 500;
+      color: var(--text); margin-bottom: 12px;
+      opacity:0; transform:translateY(8px);
+    }
+
+    .otp-row {
+      display: flex; gap: 10px; justify-content: center;
+      margin-bottom: 8px;
+      opacity:0; transform:translateY(10px);
+    }
+
+    .otp-box {
+      width: 52px; height: 60px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1.6rem; font-weight: 600;
+      color: var(--text);
+      text-align: center;
+      outline: none;
+      caret-color: var(--accent);
+      transition: border-color .2s, background .2s, box-shadow .2s, transform .15s;
+      -moz-appearance: textfield;
+    }
+    .otp-box::-webkit-outer-spin-button,
+    .otp-box::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+
+    .otp-box:focus {
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      transform: translateY(-2px);
+    }
+    .otp-box.filled {
+      border-color: rgba(79,124,255,.4);
+      background: #fff;
+    }
+    .otp-box.error-shake {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239,68,68,.12);
+    }
+
+    .otp-hint {
+      font-size: 0.72rem; color: var(--muted);
+      text-align: center; margin-bottom: 24px;
+      opacity:0;
+    }
+
+    /* Hidden actual input for form submission */
+    #otpHidden { display:none; }
+
+    /* Timer */
+    .timer-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-bottom: 24px;
+      font-size: 0.78rem; color: var(--muted);
+      opacity:0;
+    }
+    .timer-pill {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+      padding: 2px 10px; border-radius: 99px;
+      font-size: 0.8rem; font-variant-numeric: tabular-nums;
+      min-width: 44px; text-align: center;
+    }
+    .timer-pill.expiring { color: var(--danger); background: var(--danger-soft); }
+
+    /* Submit button */
+    .btn-wrap { opacity:0; transform:translateY(10px); }
+    .submit-btn {
+      width: 100%; padding: 15px;
+      background: var(--accent); border: none;
+      border-radius: 12px; color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 16px rgba(79,124,255,.3);
+    }
+    .submit-btn:hover { background:#3d6aff; transform:translateY(-1px); box-shadow:0 6px 24px rgba(79,124,255,.4); }
+    .submit-btn:active { transform:translateY(0); }
+    .submit-btn:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .submit-btn span { position:relative; z-index:1; }
+
+    .btn-ripple {
+      position:absolute; border-radius:50%;
+      background:rgba(255,255,255,.25); transform:scale(0);
+      animation:ripple .5s linear; pointer-events:none;
+    }
+    @keyframes ripple { to { transform:scale(4); opacity:0; } }
+
+    .submit-btn.loading { pointer-events:none; opacity:.85; }
+    .submit-btn.loading .btn-text { opacity:0; }
+    .submit-btn.loading .btn-dots { opacity:1; }
+    .btn-dots {
+      position:absolute;inset:0;z-index:1;
+      display:flex;align-items:center;justify-content:center;
+      gap:5px;opacity:0;transition:opacity .2s;
+    }
+    .dot { width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.9);animation:bounce .7s infinite ease-in-out; }
+    .dot:nth-child(2){animation-delay:.12s;} .dot:nth-child(3){animation-delay:.24s;}
+    @keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+
+    /* Resend row */
+    .resend-row {
+      margin-top: 20px; text-align: center;
+      font-size: 0.8rem; color: var(--muted);
+      opacity:0;
+    }
+    .resend-btn {
+      color: var(--accent); background: none; border: none;
+      font-weight: 600; font-size: 0.8rem;
+      cursor: pointer; margin-left: 4px;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity .2s; padding: 0;
+    }
+    .resend-btn:hover { opacity:.7; }
+    .resend-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+    .back-row {
+      margin-top: 12px; text-align: center;
+      font-size: 0.78rem; opacity:0;
+    }
+    .back-row a { color: var(--muted); text-decoration:none; transition:color .2s; }
+    .back-row a:hover { color: var(--text); }
+
+    /* Shake animation */
+    @keyframes shake {
+      0%,100%{transform:translateX(0);}
+      20%{transform:translateX(-6px);}
+      40%{transform:translateX(6px);}
+      60%{transform:translateX(-4px);}
+      80%{transform:translateX(4px);}
+    }
+    .shake { animation:shake .4s ease; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-blob blob1"></div>
+  <div class="bg-blob blob2"></div>
+
+  <div id="main">
+    <div class="card">
+
+      <div class="icon-wrap" id="iconWrap">📧</div>
+
+      <h2 class="heading" id="heading">Check your<br/><em>email.</em></h2>
+
+      <p class="subtitle" id="subtitle">
+        We sent a 6-digit code to<br/>
+        <strong>{{ email }}</strong>
+      </p>
+
+      {% if error %}
+      <div class="banner error" id="errorBanner">
+        <span class="banner-icon">⚠️</span>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      {% if request.args.get('resent') %}
+      <div class="banner success" id="successBanner">
+        <span class="banner-icon">✅</span>
+        A new OTP has been sent to your email.
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/verify-otp" id="otpForm">
+        <input type="hidden" name="otp" id="otpHidden"/>
+
+        <p class="otp-label" id="otpLabel">Enter 6-digit code</p>
+
+        <div class="otp-row" id="otpRow">
+          <input class="otp-box" type="number" maxlength="1" inputmode="numeric" min="0" max="9" autocomplete="one-time-code"/>
+          <input class="otp-box" type="number" maxlength="1" inputmode="numeric" min="0" max="9"/>
+          <input class="otp-box" type="number" maxlength="1" inputmode="numeric" min="0" max="9"/>
+          <input class="otp-box" type="number" maxlength="1" inputmode="numeric" min="0" max="9"/>
+          <input class="otp-box" type="number" maxlength="1" inputmode="numeric" min="0" max="9"/>
+          <input class="otp-box" type="number" maxlength="1" inputmode="numeric" min="0" max="9"/>
+        </div>
+
+        <p class="otp-hint" id="otpHint">Enter the code in the boxes above</p>
+
+        <div class="timer-row" id="timerRow">
+          Code expires in <span class="timer-pill" id="timerPill">5:00</span>
+        </div>
+
+        <div class="btn-wrap" id="btnWrap">
+          <button type="submit" class="submit-btn" id="submitBtn" disabled>
+            <span class="btn-text">Verify & Continue</span>
+            <div class="btn-dots">
+              <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+          </button>
+        </div>
+      </form>
+
+      <div class="resend-row" id="resendRow">
+        Didn't receive it?
+        <form method="POST" action="/resend-otp" style="display:inline">
+          <button type="submit" class="resend-btn" id="resendBtn">Resend code</button>
+        </form>
+      </div>
+
+      <div class="back-row" id="backRow">
+        <a href="/register-page">← Back to Register</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ── PAGE REVEAL ──
+    window.addEventListener('DOMContentLoaded', () => {
+      const tl = gsap.timeline({ defaults: { ease:'power3.out' } });
+      tl.to('#main',     { opacity:1, y:0, duration:.5 })
+        .to('#iconWrap', { opacity:1, scale:1, duration:.45 }, '-=0.2')
+        .to('#heading',  { opacity:1, y:0, duration:.5 }, '-=0.25')
+        .to('#subtitle', { opacity:1, y:0, duration:.4 }, '-=0.25');
+
+      // banners
+      const eb = document.getElementById('errorBanner');
+      const sb = document.getElementById('successBanner');
+      if (eb) tl.to(eb, { opacity:1, y:0, duration:.4 }, '-=0.1');
+      if (sb) tl.to(sb, { opacity:1, y:0, duration:.4 }, '-=0.1');
+
+      tl.to('#otpLabel',  { opacity:1, y:0, duration:.4 }, '-=0.1')
+        .to('#otpRow',    { opacity:1, y:0, duration:.45 }, '-=0.2')
+        .to('#otpHint',   { opacity:1, duration:.35 }, '-=0.1')
+        .to('#timerRow',  { opacity:1, duration:.35 }, '-=0.1')
+        .to('#btnWrap',   { opacity:1, y:0, duration:.4 }, '-=0.1')
+        .to('#resendRow', { opacity:1, duration:.35 }, '-=0.1')
+        .to('#backRow',   { opacity:1, duration:.3 }, '-=0.1');
+
+      // auto-focus first box
+      setTimeout(() => boxes[0].focus(), 600);
+    });
+
+    // ── OTP BOXES LOGIC ──
+    const boxes     = Array.from(document.querySelectorAll('.otp-box'));
+    const otpHidden = document.getElementById('otpHidden');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function getOTP() {
+      return boxes.map(b => b.value).join('');
+    }
+
+    function syncHidden() {
+      const otp = getOTP();
+      otpHidden.value = otp;
+      submitBtn.disabled = otp.length < 6;
+      boxes.forEach((b, i) => {
+        b.classList.toggle('filled', b.value !== '');
+      });
+    }
+
+    boxes.forEach((box, idx) => {
+      // Only allow 1 digit
+      box.addEventListener('input', () => {
+        // Strip to single digit
+        if (box.value.length > 1) box.value = box.value.slice(-1);
+        if (box.value) {
+          if (idx < 5) { boxes[idx+1].focus(); }
+        }
+        syncHidden();
+      });
+
+      box.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace') {
+          if (!box.value && idx > 0) {
+            boxes[idx-1].value = '';
+            boxes[idx-1].focus();
+          }
+          syncHidden();
+        }
+        if (e.key === 'ArrowLeft'  && idx > 0) boxes[idx-1].focus();
+        if (e.key === 'ArrowRight' && idx < 5) boxes[idx+1].focus();
+        // Prevent non-numeric
+        if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab/.test(e.key)) {
+          e.preventDefault();
+        }
+      });
+
+      // Handle paste
+      box.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+        pasted.split('').forEach((ch, i) => {
+          if (boxes[i]) boxes[i].value = ch;
+        });
+        const nextEmpty = boxes.findIndex(b => !b.value);
+        boxes[nextEmpty !== -1 ? nextEmpty : 5].focus();
+        syncHidden();
+      });
+    });
+
+    // ── RIPPLE ──
+    submitBtn.addEventListener('click', function(e) {
+      if (this.disabled) return;
+      const rect = this.getBoundingClientRect();
+      const r = document.createElement('span');
+      r.className = 'btn-ripple';
+      r.style.cssText = `left:${e.clientX-rect.left}px;top:${e.clientY-rect.top}px;width:20px;height:20px;margin-left:-10px;margin-top:-10px;`;
+      this.appendChild(r);
+      setTimeout(() => r.remove(), 600);
+    });
+
+    // ── SUBMIT ──
+    document.getElementById('otpForm').addEventListener('submit', function(e) {
+      const otp = getOTP();
+      if (otp.length < 6) { e.preventDefault(); return; }
+      otpHidden.value = otp;
+      submitBtn.classList.add('loading');
+    });
+
+    // ── COUNTDOWN TIMER (5 min) ──
+    const timerPill  = document.getElementById('timerPill');
+    const resendBtn  = document.getElementById('resendBtn');
+    let totalSeconds = 300;
+
+    const interval = setInterval(() => {
+      totalSeconds--;
+      if (totalSeconds <= 0) {
+        clearInterval(interval);
+        timerPill.textContent = 'Expired';
+        timerPill.classList.add('expiring');
+        submitBtn.disabled = true;
+        return;
+      }
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      timerPill.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+      if (totalSeconds <= 60) timerPill.classList.add('expiring');
+    }, 1000);
+
+    // Resend cooldown (30s)
+    let resendCooldown = 30;
+    const resendInterval = setInterval(() => {
+      resendCooldown--;
+      if (resendCooldown <= 0) {
+        clearInterval(resendInterval);
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend code';
+      } else {
+        resendBtn.disabled = true;
+        resendBtn.textContent = `Resend in ${resendCooldown}s`;
+      }
+    }, 1000);
+    resendBtn.disabled = true;
+    resendBtn.textContent = `Resend in ${resendCooldown}s`;
+  </script>
+</body>
+</html>

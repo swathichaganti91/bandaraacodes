@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f3ef;
+      --surface: #faf9f7;
+      --card: #ffffff;
+      --border: rgba(0,0,0,0.08);
+      --accent: #4f7cff;
+      --accent-soft: rgba(79,124,255,0.08);
+      --text: #1a1a2e;
+      --muted: #8a8fa8;
+      --success: #22c55e;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+      padding: 32px 16px;
+      position: relative;
+    }
+
+    /* ── BG BLOBS ── */
+    .bg-blob {
+      position: fixed; border-radius: 50%;
+      filter: blur(80px); pointer-events: none;
+      z-index: 0; opacity: 0.45;
+    }
+    .blob1 { width:480px;height:480px; background:radial-gradient(circle,rgba(79,124,255,0.12) 0%,transparent 70%); top:-140px;right:-100px; }
+    .blob2 { width:360px;height:360px; background:radial-gradient(circle,rgba(255,180,100,0.10) 0%,transparent 70%); bottom:-80px;left:-80px; }
+    .blob3 { width:240px;height:240px; background:radial-gradient(circle,rgba(100,220,180,0.08) 0%,transparent 70%); top:50%;left:50%;transform:translate(-50%,-50%); }
+
+    /* ── MAIN ── */
+    #main {
+      position: relative; z-index: 1;
+      width: 420px;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 52px 44px 44px;
+      box-shadow:
+        0 1px 3px rgba(0,0,0,0.04),
+        0 8px 32px rgba(0,0,0,0.06),
+        0 32px 64px rgba(0,0,0,0.04);
+    }
+
+    /* ── BRAND MARK ── */
+    .brand-mark {
+      width: 48px; height: 48px;
+      background: var(--accent-soft);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 28px;
+      opacity: 0; transform: scale(0.8);
+    }
+    .brand-mark svg { width: 24px; height: 24px; color: var(--accent); }
+
+    /* ── STEP DOTS ── */
+    .step-track {
+      display: flex; gap: 5px;
+      margin-bottom: 24px;
+      opacity: 0;
+    }
+    .step-dot {
+      height: 3px; flex: 1;
+      background: #e8e6e0;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .step-dot .fill {
+      height: 100%; width: 0%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.5s cubic-bezier(0.25,1,0.5,1);
+    }
+    .step-dot.active .fill { width: 100%; }
+
+    /* ── HEADER ── */
+    .greeting {
+      font-family: 'Fraunces', serif;
+      font-size: 2rem; font-weight: 600;
+      letter-spacing: -0.03em; color: var(--text);
+      line-height: 1.1; margin-bottom: 6px;
+      opacity: 0; transform: translateY(10px);
+    }
+    .greeting em { font-style: italic; font-weight: 300; color: var(--accent); }
+
+    .subtitle {
+      font-size: 0.85rem; color: var(--muted);
+      font-weight: 400; margin-bottom: 32px;
+      opacity: 0; transform: translateY(8px);
+    }
+
+    /* ── FIELDS ── */
+    .field {
+      margin-bottom: 16px;
+      opacity: 0; transform: translateY(10px);
+    }
+
+    label {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 0.75rem; font-weight: 500;
+      color: var(--text); margin-bottom: 7px;
+    }
+    .field-hint {
+      font-size: 0.68rem; font-weight: 400;
+      color: var(--muted); opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .input-wrap { position: relative; }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 13px 42px 13px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 400;
+      outline: none;
+      transition: border-color .2s, background .2s, box-shadow .2s;
+    }
+    input::placeholder { color: #c0c4d6; }
+    input:focus {
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    input.valid   { border-color: rgba(34,197,94,0.55); background: #fff; }
+    input.invalid { border-color: rgba(239,68,68,0.45); }
+
+    /* status icon */
+    .status-icon {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      width: 16px; height: 16px;
+      opacity: 0; transition: opacity 0.25s;
+      pointer-events: none;
+    }
+    .status-icon.show { opacity: 1; }
+
+    /* eye toggle */
+    .eye-btn {
+      position: absolute; right: 13px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      cursor: pointer; color: var(--muted);
+      padding: 4px; display: flex; align-items: center;
+      transition: color .2s; border-radius: 6px;
+    }
+    .eye-btn:hover { color: var(--accent); }
+
+    /* password strength */
+    .strength-bar {
+      display: flex; gap: 4px;
+      margin-top: 8px;
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .strength-bar.show { opacity: 1; }
+    .seg {
+      height: 3px; flex: 1; border-radius: 99px;
+      background: #e8e6e0;
+      transition: background 0.3s;
+    }
+    .seg.weak   { background: #ef4444; }
+    .seg.fair   { background: #f59e0b; }
+    .seg.strong { background: var(--success); }
+
+    /* ── BUTTON ── */
+    .btn-wrap {
+      margin-top: 8px;
+      opacity: 0; transform: translateY(10px);
+    }
+    button[type="submit"] {
+      width: 100%; padding: 15px;
+      background: var(--accent); border: none;
+      border-radius: 12px; color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; position: relative; overflow: hidden;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 16px rgba(79,124,255,0.3);
+    }
+    button[type="submit"]:hover {
+      background: #3d6aff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(79,124,255,0.4);
+    }
+    button[type="submit"]:active { transform: translateY(0); }
+    button[type="submit"] span { position: relative; z-index: 1; }
+
+    .btn-ripple {
+      position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transform: scale(0);
+      animation: ripple .5s linear;
+      pointer-events: none;
+    }
+    @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+
+    button[type="submit"].loading { pointer-events: none; opacity: 0.85; }
+    button[type="submit"].loading .btn-text { opacity: 0; }
+    button[type="submit"].loading .btn-dots { opacity: 1; }
+    .btn-dots {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      gap: 5px; opacity: 0; transition: opacity .2s;
+    }
+    .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(255,255,255,0.85);
+      animation: bounce .7s infinite ease-in-out;
+    }
+    .dot:nth-child(2) { animation-delay: .12s; }
+    .dot:nth-child(3) { animation-delay: .24s; }
+    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+    /* ── LOGIN LINK ── */
+    .login-row {
+      margin-top: 28px; text-align: center;
+      font-size: 0.8rem; color: var(--muted);
+      opacity: 0;
+    }
+    .login-row a {
+      color: var(--accent); text-decoration: none;
+      font-weight: 600; margin-left: 4px;
+      transition: opacity .2s;
+    }
+    .login-row a:hover { opacity: 0.75; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-blob blob1"></div>
+  <div class="bg-blob blob2"></div>
+  <div class="bg-blob blob3"></div>
+
+  <div id="main">
+    <div class="card">
+
+      <div class="brand-mark" id="brandMark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <line x1="19" y1="8" x2="19" y2="14"/>
+          <line x1="22" y1="11" x2="16" y2="11"/>
+        </svg>
+      </div>
+
+      <div class="step-track" id="stepTrack">
+        <div class="step-dot active"><div class="fill"></div></div>
+        <div class="step-dot active"><div class="fill"></div></div>
+        <div class="step-dot active"><div class="fill"></div></div>
+      </div>
+
+      <h2 class="greeting" id="greeting">Create your<br/><em>account.</em></h2>
+      <p class="subtitle" id="subtitle">Join us — set up your profile in moments</p>
+
+      <form method="POST" action="/register" id="regForm">
+
+        <div class="field" id="f1">
+          <label for="username">
+            Username
+            <span class="field-hint" id="hintUser">3–20 characters</span>
+          </label>
+          <div class="input-wrap">
+            <input type="text" id="username" name="username" placeholder="your_handle" autocomplete="username" required/>
+            <svg class="status-icon" id="iconUser" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" fill="rgba(34,197,94,0.12)" stroke="rgba(34,197,94,0.4)" stroke-width="1"/>
+              <polyline points="4.5,8 7,10.5 11.5,5.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="field" id="f2">
+          <label for="email">Email address</label>
+          <div class="input-wrap">
+            <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required/>
+            <svg class="status-icon" id="iconEmail" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="7" fill="rgba(34,197,94,0.12)" stroke="rgba(34,197,94,0.4)" stroke-width="1"/>
+              <polyline points="4.5,8 7,10.5 11.5,5.5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="field" id="f3">
+          <label for="password">
+            Password
+            <span class="field-hint" id="hintPwd">Min. 8 characters</span>
+          </label>
+          <div class="input-wrap">
+            <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" required/>
+            <button type="button" class="eye-btn" id="togglePwd" aria-label="Toggle password">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <div class="strength-bar" id="strengthBar">
+            <div class="seg" id="seg1"></div>
+            <div class="seg" id="seg2"></div>
+            <div class="seg" id="seg3"></div>
+            <div class="seg" id="seg4"></div>
+          </div>
+        </div>
+
+        <div class="btn-wrap" id="btnWrap">
+          <button type="submit" id="submitBtn">
+            <span class="btn-text">Create Account</span>
+            <div class="btn-dots">
+              <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+          </button>
+        </div>
+      </form>
+
+      <div class="login-row" id="loginRow">
+        Already have an account?
+        <a href="/">Sign in</a>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ── CARD REVEAL ──
+    window.addEventListener('DOMContentLoaded', () => {
+      gsap.timeline({ defaults: { ease: 'power3.out' } })
+        .to('#main',      { opacity: 1, y: 0, duration: 0.5 })
+        .to('#brandMark', { opacity: 1, scale: 1, duration: 0.45 }, '-=0.2')
+        .to('#stepTrack', { opacity: 1, duration: 0.4 }, '-=0.2')
+        .to('#greeting',  { opacity: 1, y: 0, duration: 0.5 }, '-=0.25')
+        .to('#subtitle',  { opacity: 1, y: 0, duration: 0.4 }, '-=0.25')
+        .to(['#f1','#f2','#f3'], { opacity: 1, y: 0, duration: 0.45, stagger: 0.1 }, '-=0.2')
+        .to('#btnWrap',   { opacity: 1, y: 0, duration: 0.4 }, '-=0.1')
+        .to('#loginRow',  { opacity: 1, duration: 0.35 }, '-=0.1');
+    });
+
+    // ── PASSWORD TOGGLE ──
+    document.getElementById('togglePwd').addEventListener('click', function () {
+      const pwd = document.getElementById('password');
+      pwd.type = pwd.type === 'password' ? 'text' : 'password';
+      gsap.fromTo(this, { scale: 0.75 }, { scale: 1, duration: 0.2, ease: 'back.out(2)' });
+    });
+
+    // ── USERNAME VALIDATION ──
+    const usernameInput = document.getElementById('username');
+    usernameInput.addEventListener('focus', () => { document.getElementById('hintUser').style.opacity = '1'; });
+    usernameInput.addEventListener('blur',  () => { document.getElementById('hintUser').style.opacity = '0'; });
+    usernameInput.addEventListener('input', () => {
+      const ok = usernameInput.value.length >= 3;
+      usernameInput.className = ok ? 'valid' : (usernameInput.value.length > 0 ? 'invalid' : '');
+      document.getElementById('iconUser').classList.toggle('show', ok);
+    });
+
+    // ── EMAIL VALIDATION ──
+    const emailInput = document.getElementById('email');
+    emailInput.addEventListener('input', () => {
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value);
+      emailInput.className = ok ? 'valid' : (emailInput.value.length > 0 ? 'invalid' : '');
+      document.getElementById('iconEmail').classList.toggle('show', ok);
+    });
+
+    // ── PASSWORD STRENGTH ──
+    const pwdInput    = document.getElementById('password');
+    const strengthBar = document.getElementById('strengthBar');
+    const segs        = ['seg1','seg2','seg3','seg4'].map(id => document.getElementById(id));
+
+    pwdInput.addEventListener('focus', () => {
+      strengthBar.classList.add('show');
+      document.getElementById('hintPwd').style.opacity = '1';
+    });
+    pwdInput.addEventListener('blur', () => {
+      document.getElementById('hintPwd').style.opacity = '0';
+    });
+    pwdInput.addEventListener('input', () => {
+      const v = pwdInput.value;
+      let score = 0;
+      if (v.length >= 8)          score++;
+      if (/[A-Z]/.test(v))        score++;
+      if (/[0-9]/.test(v))        score++;
+      if (/[^A-Za-z0-9]/.test(v)) score++;
+      const cls = score <= 1 ? 'weak' : score <= 2 ? 'fair' : 'strong';
+      segs.forEach((s, i) => {
+        s.className = 'seg';
+        if (i < score) s.classList.add(cls);
+      });
+    });
+
+    // ── RIPPLE + SUBMIT ──
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.addEventListener('click', function (e) {
+      const rect = this.getBoundingClientRect();
+      const r = document.createElement('span');
+      r.className = 'btn-ripple';
+      r.style.cssText = `left:${e.clientX - rect.left}px;top:${e.clientY - rect.top}px;width:20px;height:20px;margin-left:-10px;margin-top:-10px;`;
+      this.appendChild(r);
+      setTimeout(() => r.remove(), 600);
+    });
+
+    document.getElementById('regForm').addEventListener('submit', function () {
+      this.querySelector('button[type="submit"]').classList.add('loading');
+    });
+  </script>
+</body>
+</html>

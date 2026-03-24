@@ -1,0 +1,210 @@
+import json
+import urllib.parse
+import smtplib
+import mysql.connector
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# ══════════════════════════════════════
+# CONFIG
+# ══════════════════════════════════════
+DB_HOST     = "database-1.c8528mcsyu64.us-east-1.rds.amazonaws.com"
+DB_USER     = "admin"
+DB_PASSWORD = "mandeep123"
+DB_NAME     = "dev"
+
+GMAIL_SENDER   = "nicomandu37@gmail.com"
+GMAIL_PASSWORD = "yfih smaj ukrk pgjl"
+APP_NAME       = "Bandaara Alert"
+
+
+# ══════════════════════════════════════
+# GET ALL USERS FROM RDS
+# ══════════════════════════════════════
+def get_all_users():
+    conn   = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host            = DB_HOST,
+            user            = DB_USER,
+            password        = DB_PASSWORD,
+            database        = DB_NAME,
+            port            = 3306,
+            connect_timeout = 5,
+        )
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT username, email FROM users")
+        users = cursor.fetchall()
+        print(f"[LAMBDA] {len(users)} users found")
+        return users
+    except Exception as e:
+        print(f"[LAMBDA] DB ERROR: {e}")
+        return []
+    finally:
+        if cursor: cursor.close()
+        if conn:   conn.close()
+
+
+# ══════════════════════════════════════
+# GET LATEST LOCATION FROM RDS
+# ══════════════════════════════════════
+def get_latest_location():
+    conn   = None
+    cursor = None
+    try:
+        conn = mysql.connector.connect(
+            host            = DB_HOST,
+            user            = DB_USER,
+            password        = DB_PASSWORD,
+            database        = DB_NAME,
+            port            = 3306,
+            connect_timeout = 5,
+        )
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT location FROM bandara ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        return row['location'] if row else "Unknown location"
+    except Exception as e:
+        print(f"[LAMBDA] DB location ERROR: {e}")
+        return "Unknown location"
+    finally:
+        if cursor: cursor.close()
+        if conn:   conn.close()
+
+
+# ══════════════════════════════════════
+# SEND EMAIL VIA GMAIL
+# ══════════════════════════════════════
+def send_email(username, to_email, image_url, location):
+    subject  = "New Food Sighting - " + APP_NAME
+    maps_url = "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(location)
+
+    html = """
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;background:#f5f3ef;padding:40px 20px;">
+      <div style="background:#ffffff;border-radius:20px;padding:48px 40px;box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <div style="font-size:2.5rem;">&#127857;</div>
+          <h1 style="font-size:1.6rem;font-weight:700;color:#1a1a2e;margin:8px 0 4px;">Bandaara Alert</h1>
+          <p style="color:#8a8fa8;font-size:0.82rem;margin:0;">New Food Sighting Reported</p>
+        </div>
+
+        <div style="text-align:center;margin-bottom:24px;">
+          <span style="background:#dcfce7;color:#16a34a;font-size:0.7rem;font-weight:700;
+                       padding:5px 16px;border-radius:99px;border:1px solid #bbf7d0;">
+            LIVE ALERT
+          </span>
+        </div>
+
+        <p style="color:#1a1a2e;font-size:0.95rem;margin-bottom:4px;">Hi <strong>""" + username + """</strong></p>
+        <p style="color:#8a8fa8;font-size:0.88rem;line-height:1.6;margin-bottom:24px;">
+          A new food sighting has just been reported on Bandaara. Check it out!
+        </p>
+
+        <div style="border-radius:14px;overflow:hidden;margin-bottom:20px;border:1px solid rgba(0,0,0,0.08);">
+          <img src='""" + image_url + """' alt="Food Sighting"
+               style="width:100%;height:200px;object-fit:cover;display:block;"/>
+        </div>
+
+        <div style="background:#f5f3ef;border-radius:14px;padding:18px 22px;margin-bottom:24px;">
+          <p style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;
+                    color:#8a8fa8;text-transform:uppercase;margin:0 0 6px;">Location</p>
+          <p style="font-size:0.95rem;font-weight:600;color:#1a1a2e;margin:0;">""" + location + """</p>
+        </div>
+
+        <div style="text-align:center;margin-bottom:28px;">
+          <a href='""" + maps_url + """'
+             style="display:inline-block;background:#4f7cff;color:#ffffff;font-weight:600;
+                    font-size:0.9rem;padding:14px 36px;border-radius:12px;text-decoration:none;">
+            View on Maps
+          </a>
+        </div>
+
+        <p style="color:#b0b5c4;font-size:0.72rem;text-align:center;margin:0;">
+          You received this because you are registered on Bandaara Alert.
+        </p>
+
+      </div>
+    </div>
+    """
+
+    text = (
+        "Hi " + username + ",\n\n"
+        "New food sighting on Bandaara Alert!\n"
+        "Location: " + location + "\n"
+        "Image: " + image_url + "\n"
+        "Maps: " + maps_url + "\n\n"
+        "-- Bandaara Alert Team"
+    )
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = GMAIL_SENDER
+        msg["To"]      = to_email
+        msg.attach(MIMEText(text, "plain"))
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(GMAIL_SENDER, GMAIL_PASSWORD)
+            server.sendmail(GMAIL_SENDER, to_email, msg.as_string())
+
+        print("[LAMBDA] sent to " + to_email)
+        return True
+
+    except Exception as e:
+        print("[LAMBDA] Gmail error for " + to_email + " : " + str(e))
+        return False
+
+
+# ══════════════════════════════════════
+# MAIN HANDLER
+# ══════════════════════════════════════
+def lambda_handler(event, context):
+    print("[LAMBDA] triggered")
+    print(json.dumps(event))
+
+    try:
+        record = event['Records'][0]
+        bucket = record['s3']['bucket']['name']
+        key    = urllib.parse.unquote_plus(record['s3']['object']['key'])
+        print("[LAMBDA] file: s3://" + bucket + "/" + key)
+    except Exception as e:
+        print("[LAMBDA] event parse error: " + str(e))
+        return {"statusCode": 400, "body": "bad event"}
+
+    if not key.startswith("bandaara-images/"):
+        print("[LAMBDA] skipping wrong folder: " + key)
+        return {"statusCode": 200, "body": "skipped"}
+
+    image_url = "https://" + bucket + ".s3.us-east-1.amazonaws.com/" + key
+    print("[LAMBDA] image_url: " + image_url)
+
+    location = get_latest_location()
+    print("[LAMBDA] location: " + location)
+
+    users = get_all_users()
+    if not users:
+        print("[LAMBDA] no users found")
+        return {"statusCode": 200, "body": "no users"}
+
+    sent   = 0
+    failed = 0
+    for user in users:
+        ok = send_email(
+            username  = user['username'],
+            to_email  = user['email'],
+            image_url = image_url,
+            location  = location,
+        )
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+
+    print("[LAMBDA] done - sent:" + str(sent) + " failed:" + str(failed))
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"sent": sent, "failed": failed})
+    }
