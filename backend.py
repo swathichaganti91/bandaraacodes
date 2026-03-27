@@ -13,7 +13,7 @@ CORS(app)
 #  DATABASE CONFIG  —  AWS RDS MySQL
 # ══════════════════════════════════════════════════════════════
 db_config = {
-    'host':            'backend.ooo',  # 🔁 replace
+    'host':             os.getenv("DB_ENDPOINT"),  # 🔁 replace
     'user':            'admin',                                 # 🔁 replace
     'password':        'mandeep123',                     # 🔁 replace
     'database':        'dev',
