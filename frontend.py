@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.secret_key = "bandaara_secret_2024"
 
 # ── Backend Private IP ──
-API = "http://172.31.28.185:5000"
+API = os.getenv("API_URL")
 
 # ── Email Config ──
 EMAIL_SENDER   = "nicomandu37@gmail.com"
